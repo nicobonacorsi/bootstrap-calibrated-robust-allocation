@@ -1,0 +1,15 @@
+{
+  "study_period": "2013-2026 walk-forward confirmation",
+  "model_selection_period": "2000-2012 only",
+  "robust_annualized_volatility": 0.1645,
+  "equal_weight_annualized_volatility": 0.2015,
+  "relative_volatility_reduction": 0.184,
+  "paired_block_bootstrap_95pct_CI_relative_reduction": [
+    0.15,
+    0.226
+  ],
+  "CAGR": 0.129,
+  "net_Sharpe_after_10bps_costs": 0.82,
+  "ledoit_wolf_annualized_volatility": 0.1646,
+  "note": "Archived reference metrics from the research run; exact reruns can vary with upstream data vintage and validation-selected hyperparameters."
+}
