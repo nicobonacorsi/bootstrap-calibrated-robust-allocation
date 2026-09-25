@@ -27,20 +27,24 @@ jobs:
           import json, re
           from pathlib import Path
           manifest = json.loads(Path("jkp_raw/availability.json").read_text())
+          factors = manifest.get("factors", {})
+          country_codes = sorted(k for k in factors if re.fullmatch(r"[a-z]{3}", k))
           regions = sorted(
-              k for k, selectors in manifest.get("factors", {}).items()
-              if re.fullmatch(r"[a-z]{3}", k) and "all_factors" in selectors
+              k for k in country_codes
+              if "all_factors" in factors[k]
           )
-          if not (90 <= len(regions) <= 100):
-              raise SystemExit(f"Unexpected country count: {len(regions)}")
+          if len(regions) != 71:
+              raise SystemExit(f"Unexpected balanced all_factors country count: {len(regions)}")
           Path("jkp_raw/countries.txt").write_text("\n".join(regions) + "\n")
           Path("jkp_raw/source.txt").write_text(
               "Source: Jensen-Kelly-Pedersen Global Factor Data\n"
               "Endpoint: https://jkpfactors-data.s3.amazonaws.com/public/\n"
               "Selector: all_factors\nFrequency: monthly\nWeighting: vw_cap\n"
+              "Balanced full-153-factor countries from live manifest: 71\n"
               "License: CC BY-NC 4.0\n"
           )
-          print("country_count=", len(regions))
+          print("manifest_three_letter_regions=", len(country_codes))
+          print("balanced_all_factors_countries=", len(regions))
           print("countries=", ",".join(regions))
           PY
 
@@ -76,6 +80,8 @@ jobs:
                   bad.append((c,repr(e)))
           if bad:
               raise SystemExit(f"Invalid archives: {bad[:20]}")
+          if len(countries) != 71:
+              raise SystemExit(f"Country count changed after download: {len(countries)}")
           print("validated_archives=",len(countries))
           PY
           sha256sum jkp_raw/*.zip > jkp_raw/SHA256SUMS.txt
