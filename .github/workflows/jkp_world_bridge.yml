@@ -1,0 +1,49 @@
+name: Temporary JKP world factor bridge
+
+on:
+  push:
+    branches: [jkp-data-fetch-temp]
+    paths:
+      - ".github/workflows/jkp_world_bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Fetch official JKP world factor archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p jkp_world
+          BASE="https://jkpfactors-data.s3.amazonaws.com/public"
+          for w in vw_cap vw ew; do
+            url="$BASE/%5Bworld%5D_%5Ball_factors%5D_%5Bmonthly%5D_%5B${w}%5D.zip"
+            curl -fL --retry 5 --retry-all-errors "$url" -o "jkp_world/world_all_factors_monthly_${w}.zip"
+          done
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          ps=sorted(Path("jkp_world").glob("*.zip"))
+          if len(ps)!=3: raise SystemExit(f"expected 3 archives, got {len(ps)}")
+          for p in ps:
+              with zipfile.ZipFile(p) as z:
+                  if z.testzip() is not None: raise SystemExit(f"CRC failure: {p}")
+                  if not any(n.lower().endswith(".csv") for n in z.namelist()):
+                      raise SystemExit(f"No CSV: {p}")
+          print("validated", [p.name for p in ps])
+          PY
+          sha256sum jkp_world/*.zip > jkp_world/SHA256SUMS.txt
+
+      - name: Upload world JKP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jkp-world-factors-monthly
+          path: jkp_world/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
